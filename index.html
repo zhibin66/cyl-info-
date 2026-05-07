@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>钢瓶信息二维码系统</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f0f2f5;
+    color: #333;
+    padding: 20px;
+    min-height: 100vh;
+  }
+  .container { max-width: 520px; margin: 0 auto; }
+  h1 {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 600;
+    color: #1a73e8;
+    margin-bottom: 16px;
+    letter-spacing: 2px;
+  }
+
+  /* 部署设置 */
+  .deploy-toggle {
+    text-align: center;
+    margin-bottom: 12px;
+  }
+  .deploy-toggle a {
+    font-size: 13px;
+    color: #999;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .deploy-toggle a:hover { color: #1a73e8; }
+  .deploy-section {
+    background: #fff;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    display: none;
+  }
+  .deploy-section.open { display: block; }
+  .deploy-section label {
+    display: block;
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 4px;
+  }
+  .deploy-section input {
+    width: 100%;
+    height: 38px;
+    padding: 0 10px;
+    border: 1.5px solid #d0d5dd;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+  }
+  .deploy-section input:focus {
+    border-color: #1a73e8;
+    box-shadow: 0 0 0 3px rgba(26,115,232,0.12);
+  }
+  .deploy-hint {
+    font-size: 12px;
+    color: #aaa;
+    margin-top: 6px;
+    line-height: 1.6;
+  }
+  .deploy-section .btn-save-url {
+    margin-top: 8px;
+    padding: 6px 20px;
+    background: #1a73e8;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .deploy-section .btn-save-url:hover { background: #1557b0; }
+  .deploy-status {
+    font-size: 12px;
+    margin-top: 6px;
+  }
+  .deploy-status.ok { color: #34a853; }
+  .deploy-status.warn { color: #ea8600; }
+
+  .section {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a73e8;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e8f0fe;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title .num {
+    background: #1a73e8; color: #fff;
+    width: 22px; height: 22px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600;
+  }
+  .form-row { margin-bottom: 14px; }
+  .form-row:last-child { margin-bottom: 0; }
+  label {
+    display: block;
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 4px;
+  }
+  label .required { color: #e53935; margin-left: 2px; }
+  input, select {
+    width: 100%;
+    height: 42px;
+    padding: 0 12px;
+    border: 1.5px solid #d0d5dd;
+    border-radius: 8px;
+    font-size: 15px;
+    color: #333;
+    background: #fafafa;
+    outline: none;
+    transition: all 0.2s;
+  }
+  input:focus, select:focus {
+    border-color: #1a73e8;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(26,115,232,0.12);
+  }
+  input::placeholder { color: #aaa; }
+  .btn-submit {
+    width: 100%;
+    height: 50px;
+    background: linear-gradient(135deg, #1a73e8, #1557b0);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: 4px;
+    cursor: pointer;
+    transition: all 0.25s;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(26,115,232,0.25);
+  }
+  .btn-submit:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(26,115,232,0.35); }
+  .btn-submit:active { transform: translateY(0); }
+  .btn-submit:disabled { background: #a0c4ff; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  /* 二维码结果区 */
+  .qr-area {
+    display: none;
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    margin-bottom: 16px;
+  }
+  .qr-area.show { display: block; }
+  .qr-area .qr-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  #qrcode {
+    display: flex;
+    justify-content: center;
+    padding: 12px;
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 8px;
+  }
+  #qrcode canvas, #qrcode img { display: block; max-width: 100%; height: auto; }
+
+  .qr-body {
+    margin-top: 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 13px;
+    color: #555;
+    line-height: 1.8;
+  }
+  .qr-body .qr-label {
+    color: #888;
+    display: inline-block;
+    min-width: 80px;
+  }
+  .qr-body .qr-row {
+    display: flex;
+    flex-wrap: wrap;
+    padding: 2px 0;
+    border-bottom: 1px dashed #eee;
+  }
+  .qr-body .qr-row:last-child { border-bottom: none; }
+  .qr-body .qr-val { color: #333; flex: 1; }
+
+  .qr-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .btn-download, .btn-reset {
+    padding: 10px 28px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+  }
+  .btn-download { background: #1a73e8; color: #fff; }
+  .btn-download:hover { background: #1557b0; }
+  .btn-reset { background: #f5f5f5; color: #666; border: 1px solid #d0d5dd; }
+  .btn-reset:hover { background: #e8e8e8; }
+
+  /* 历史记录 */
+  .history-area {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .history-area .h-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .history-item:last-child { border-bottom: none; }
+  .history-item:hover { background: #f8f9fa; margin: 0 -8px; padding: 10px 8px; border-radius: 6px; }
+  .history-item .h-icon {
+    width: 36px; height: 36px;
+    background: #e8f0fe; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 16px; color: #1a73e8;
+  }
+  .history-item .h-info { flex: 1; min-width: 0; }
+  .history-item .h-info .h-top { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .history-item .h-info .h-time { font-size: 12px; color: #999; margin-top: 2px; }
+  .history-item .h-del { color: #ccc; cursor: pointer; font-size: 18px; padding: 4px; line-height: 1; }
+  .history-item .h-del:hover { color: #e53935; }
+  .empty-history { text-align: center; padding: 30px 0; color: #bbb; font-size: 14px; }
+
+  /* 扫码查看页 */
+  .scan-section {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .scan-input-row {
+    display: flex;
+    gap: 8px;
+  }
+  .scan-input-row input { flex: 1; }
+  .btn-scan {
+    height: 42px;
+    padding: 0 20px;
+    background: #34a853;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+  }
+  .btn-scan:hover { background: #2d8f47; }
+
+  .tabs {
+    display: flex;
+    margin-bottom: 16px;
+    gap: 0;
+    background: #e8e8e8;
+    border-radius: 10px;
+    padding: 3px;
+  }
+  .tab-item {
+    flex: 1;
+    text-align: center;
+    padding: 8px 0;
+    font-size: 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #666;
+  }
+  .tab-item.active {
+    background: #fff;
+    color: #1a73e8;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  /* ========== 扫码查看器样式（微信打开时的完整页面） ========== */
+  .viewer-page { display: none; }
+  .viewer-page.active { display: block; }
+  .viewer-page .container {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 16px 0;
+  }
+  .viewer-header {
+    text-align: center;
+    padding: 20px 16px 12px;
+    margin-bottom: 12px;
+  }
+  .viewer-header .badge {
+    display: inline-block;
+    background: #e8f0fe;
+    color: #1a73e8;
+    font-size: 12px;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+  .viewer-header h2 {
+    font-size: 20px;
+    color: #1a73e8;
+    margin: 10px 0 4px;
+    letter-spacing: 1px;
+  }
+  .viewer-header .code {
+    font-size: 14px;
+    color: #666;
+    font-family: monospace;
+    background: #f5f5f5;
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 6px;
+    margin-top: 4px;
+  }
+  .viewer-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .viewer-card .card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a73e8;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e8f0fe;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .viewer-card .info-row {
+    display: flex;
+    padding: 7px 0;
+    border-bottom: 1px dashed #f0f0f0;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .viewer-card .info-row:last-child { border-bottom: none; }
+  .viewer-card .info-label {
+    color: #888;
+    min-width: 90px;
+    flex-shrink: 0;
+  }
+  .viewer-card .info-value {
+    color: #333;
+    flex: 1;
+    word-break: break-all;
+  }
+  .viewer-footer {
+    text-align: center;
+    padding: 20px 0 10px;
+    font-size: 12px;
+    color: #bbb;
+  }
+  .viewer-qr-link {
+    display: flex;
+    justify-content: center;
+    margin: 12px 0;
+  }
+  .viewer-qr-link img, .viewer-qr-link canvas {
+    max-width: 120px;
+    border: 1px solid #eee;
+    border-radius: 6px;
+    padding: 6px;
+  }
+
+  @media (max-width: 400px) {
+    body { padding: 12px; }
+    .section, .scan-section { padding: 16px; }
+    .viewer-card { padding: 14px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="appGenerator" class="container">
+  <h1>📋 钢瓶信息管理系统</h1>
+
+  <!-- 部署设置 -->
+  <div class="deploy-toggle">
+    <a id="deployToggle">⚙️ 部署设置（微信扫码查看页面需要）</a>
+  </div>
+  <div class="deploy-section" id="deploySection">
+    <label>页面部署地址</label>
+    <input type="url" id="deployUrl" placeholder="例：https://yourname.github.io/cyl-info/index.html">
+    <div class="deploy-hint">
+      ⚡ 将此 HTML 文件部署到服务器（如 GitHub Pages、Vercel 等），填写上面的 URL 后，
+      生成的二维码将包含完整信息链接，微信扫码即可显示精美信息页面。<br>
+      若不填写，二维码将包含纯文本信息（微信扫码只显示文字）。
+    </div>
+    <button class="btn-save-url" id="btnSaveUrl">保存</button>
+    <div id="deployStatus" class="deploy-status warn">尚未设置部署地址</div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab-item active" data-tab="form">📝 录入</div>
+    <div class="tab-item" data-tab="scan">📷 扫码</div>
+  </div>
+
+  <!-- ========== 录入页 ========== -->
+  <div id="tabForm">
+
+  <!-- 钢瓶信息 -->
+  <div class="section">
+    <div class="section-title"><span class="num">1</span> 钢瓶信息</div>
+    <div class="form-row"><label>气瓶编号</label><input type="text" id="cyl_no" placeholder="请输入气瓶编号"></div>
+    <div class="form-row"><label>产权单位 <span class="required">*</span></label><input type="text" id="owner" placeholder="请输入产权单位"></div>
+    <div class="form-row"><label>使用登记编号 <span class="required">*</span></label><input type="text" id="reg_no" placeholder="请输入使用登记编号"></div>
+    <div class="form-row"><label>气瓶标签号 <span class="required">*</span></label><input type="text" id="tag_no" placeholder="请输入气瓶标签号"></div>
+    <div class="form-row"><label>制造单位 <span class="required">*</span></label><input type="text" id="manufacturer" placeholder="请输入制造单位"></div>
+    <div class="form-row"><label>制造日期 <span class="required">*</span></label><input type="date" id="mfg_date"></div>
+    <div class="form-row"><label>钢瓶规格 <span class="required">*</span></label><input type="text" id="spec" placeholder="例：YSP-15 / 15kg"></div>
+    <div class="form-row"><label>检验日期 <span class="required">*</span></label><input type="date" id="inspect_date"></div>
+    <div class="form-row"><label>钢瓶标记重量(KG) <span class="required">*</span></label><input type="number" id="weight" step="0.1" placeholder="请输入标记重量"></div>
+    <div class="form-row"><label>充装介质 <span class="required">*</span></label><input type="text" id="medium" placeholder="例：液化石油气"></div>
+    <div class="form-row"><label>容积 <span class="required">*</span></label><input type="number" id="volume" step="0.1" placeholder="请输入容积(L)"></div>
+    <div class="form-row"><label>下次检验日期 <span class="required">*</span></label><input type="date" id="next_inspect"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title"><span class="num">2</span> 充装信息</div>
+    <div class="form-row"><label>充装单位 <span class="required">*</span></label><input type="text" id="fill_unit" placeholder="请输入充装单位"></div>
+    <div class="form-row">
+      <label>充装前状态 <span class="required">*</span></label>
+      <select id="pre_status"><option value="">请选择</option><option>空瓶</option><option>余气瓶</option><option>已检验</option><option>待检验</option></select>
+    </div>
+    <div class="form-row">
+      <label>气瓶充装状态 <span class="required">*</span></label>
+      <select id="fill_status"><option value="">请选择</option><option>已充装</option><option>未充装</option><option>充装中</option></select>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title"><span class="num">3</span> 配送信息</div>
+    <div class="form-row"><label>客户名称</label><input type="text" id="cust_name" placeholder="请输入客户名称"></div>
+    <div class="form-row"><label>客户联系人 <span class="required">*</span></label><input type="text" id="cust_contact" placeholder="请输入联系人"></div>
+    <div class="form-row"><label>客户电话 <span class="required">*</span></label><input type="tel" id="cust_phone" placeholder="请输入联系电话"></div>
+    <div class="form-row"><label>配送时间</label><input type="datetime-local" id="delivery_time"></div>
+  </div>
+
+  <button class="btn-submit" id="btnSubmit">生成二维码</button>
+
+  <!-- 二维码展示区 -->
+  <div class="qr-area" id="qrArea">
+    <div class="qr-title">✅ 二维码已生成</div>
+    <div id="qrcode"></div>
+    <div class="qr-body" id="qrBody"></div>
+    <div class="qr-hint" style="text-align:center;font-size:12px;color:#999;margin-top:8px;" id="qrHint">微信扫码即可查看完整信息</div>
+    <div style="margin:12px 0 0;background:#f8f9fa;border-radius:8px;padding:14px;font-size:12px;font-family:monospace;white-space:pre-wrap;color:#555;line-height:1.6;" id="qrPreview"></div>
+    <div class="qr-actions">
+      <button class="btn-download" id="btnDownload">下载二维码</button>
+      <button class="btn-reset" id="btnReset">继续填写</button>
+    </div>
+  </div>
+
+  <!-- 历史记录 -->
+  <div class="history-area">
+    <div class="h-title">
+      <span>📜 生成记录</span>
+      <span style="font-size:12px;color:#999;font-weight:400;" id="historyCount"></span>
+    </div>
+    <div id="historyList"></div>
+  </div>
+
+  </div><!-- /tabForm -->
+
+  <!-- ========== 扫码查看页 ========== -->
+  <div id="tabScan" style="display:none;">
+    <div class="scan-section">
+      <div style="text-align:center;font-size:40px;margin-bottom:12px;">📷</div>
+      <div style="text-align:center;font-size:15px;color:#555;margin-bottom:16px;">
+        扫描钢瓶二维码后，输入二维码上的编码查看详细信息
+      </div>
+      <div class="scan-input-row">
+        <input type="text" id="scanCode" placeholder="请输入钢瓶编码" style="flex:1;">
+        <button class="btn-scan" id="btnScan">查 看</button>
+      </div>
+      <div id="scanResult" style="margin-top:16px;"></div>
+    </div>
+  </div>
+
+</div><!-- /容器 -->
+
+<!-- ========== 扫码查看器（微信扫码后看到的完整页面） ========== -->
+<div id="appViewer" class="viewer-page">
+  <div class="container" id="viewerContainer">
+    <div class="viewer-header">
+      <span class="badge">🧯 钢瓶信息</span>
+      <h2>钢瓶信息卡</h2>
+      <div class="code" id="viewerCode"></div>
+    </div>
+    <div id="viewerCards"></div>
+    <div class="viewer-footer">扫码查询 · 数据真实有效</div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const STORAGE_KEY = 'cyl_records';
+  const DEPLOY_URL_KEY = 'cyl_deploy_url';
+
+  // ========== 短键名映射（压缩 URL 数据体积） ==========
+  var SK = {
+    cyl_no: 'a', owner: 'b', reg_no: 'c', tag_no: 'd',
+    manufacturer: 'e', mfg_date: 'f', spec: 'g',
+    inspect_date: 'h', weight: 'i', medium: 'j',
+    volume: 'k', next_inspect: 'l',
+    fill_unit: 'm', pre_status: 'n', fill_status: 'o',
+    cust_name: 'p', cust_contact: 'q', cust_phone: 'r',
+    delivery_time: 's', code: 't', createdAt: 'u'
+  };
+  var REV_SK = {};
+  for (var k in SK) REV_SK[SK[k]] = k;
+
+  // ---------- 工具 ----------
+  function loadHistory() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch(e) { return []; } }
+  function saveHistory(list) { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); }
+  function getDeployUrl() { return localStorage.getItem(DEPLOY_URL_KEY) || ''; }
+  function setDeployUrl(url) { localStorage.setItem(DEPLOY_URL_KEY, url); }
+
+  // 生成短编码：日期+序号
+  function makeCode(seq) {
+    var d = new Date();
+    var ds = d.getFullYear().toString().slice(2) +
+      String(d.getMonth()+1).padStart(2,'0') +
+      String(d.getDate()).padStart(2,'0');
+    return 'GP' + ds + String(seq).padStart(4,'0');
+  }
+
+  // 字段中文名映射
+  var FIELD_LABELS = {
+    cyl_no: '气瓶编号', owner: '产权单位', reg_no: '使用登记编号', tag_no: '气瓶标签号',
+    manufacturer: '制造单位', mfg_date: '制造日期', spec: '钢瓶规格',
+    inspect_date: '检验日期', weight: '钢瓶标记重量(KG)', medium: '充装介质',
+    volume: '容积', next_inspect: '下次检验日期',
+    fill_unit: '充装单位', pre_status: '充装前状态', fill_status: '气瓶充装状态',
+    cust_name: '客户名称', cust_contact: '客户联系人', cust_phone: '客户电话',
+    delivery_time: '配送时间'
+  };
+
+  // 分组展示
+  var FIELD_GROUPS = [
+    { title: '📦 钢瓶信息', icon: '📦', fields: ['cyl_no','owner','reg_no','tag_no','manufacturer','mfg_date','spec','inspect_date','weight','medium','volume','next_inspect'] },
+    { title: '🔧 充装信息', icon: '🔧', fields: ['fill_unit','pre_status','fill_status'] },
+    { title: '🚚 配送信息', icon: '🚚', fields: ['cust_name','cust_contact','cust_phone','delivery_time'] }
+  ];
+
+  // ---------- 编码/解码（URL 安全 base64） ----------
+  function encodeData(d) {
+    var c = {};
+    for (var k in SK) {
+      if (d[k] !== undefined && d[k] !== '') c[SK[k]] = d[k];
+    }
+    var json = JSON.stringify(c);
+    var b64 = btoa(unescape(encodeURIComponent(json)));
+    return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  function decodeData(str) {
+    var b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+    var json = decodeURIComponent(escape(atob(b64)));
+    var c = JSON.parse(json);
+    var d = {};
+    for (var s in c) {
+      var full = REV_SK[s];
+      if (full) d[full] = c[s];
+    }
+    return d;
+  }
+
+  // ---------- 读取表单 ----------
+  function collectFormData() {
+    return {
+      cyl_no: document.getElementById('cyl_no').value.trim(),
+      owner: document.getElementById('owner').value.trim(),
+      reg_no: document.getElementById('reg_no').value.trim(),
+      tag_no: document.getElementById('tag_no').value.trim(),
+      manufacturer: document.getElementById('manufacturer').value.trim(),
+      mfg_date: document.getElementById('mfg_date').value,
+      spec: document.getElementById('spec').value.trim(),
+      inspect_date: document.getElementById('inspect_date').value,
+      weight: document.getElementById('weight').value,
+      medium: document.getElementById('medium').value.trim(),
+      volume: document.getElementById('volume').value,
+      next_inspect: document.getElementById('next_inspect').value,
+      fill_unit: document.getElementById('fill_unit').value.trim(),
+      pre_status: document.getElementById('pre_status').value,
+      fill_status: document.getElementById('fill_status').value,
+      cust_name: document.getElementById('cust_name').value.trim(),
+      cust_contact: document.getElementById('cust_contact').value.trim(),
+      cust_phone: document.getElementById('cust_phone').value.trim(),
+      delivery_time: document.getElementById('delivery_time').value
+    };
+  }
+
+  // ---------- 必填校验 ----------
+  function validate(d) {
+    var required = [
+      'owner','reg_no','tag_no','manufacturer','mfg_date','spec',
+      'inspect_date','weight','medium','volume','next_inspect',
+      'fill_unit','pre_status','fill_status','cust_contact','cust_phone'
+    ];
+    for (var i = 0; i < required.length; i++) {
+      var k = required[i];
+      if (!d[k]) return '请填写「' + (FIELD_LABELS[k] || k) + '」';
+    }
+    return null;
+  }
+
+  // ---------- 渲染详情 ----------
+  function renderDetail(d, container) {
+    var fields = [
+      'cyl_no','owner','reg_no','tag_no','manufacturer','mfg_date','spec',
+      'inspect_date','weight','medium','volume','next_inspect',
+      'fill_unit','pre_status','fill_status',
+      'cust_name','cust_contact','cust_phone','delivery_time'
+    ];
+    var html = '';
+    for (var i = 0; i < fields.length; i++) {
+      var f = fields[i];
+      var v = d[f];
+      if (!v) continue;
+      html += '<div class="qr-row"><span class="qr-label">' + (FIELD_LABELS[f]||f) + '</span><span class="qr-val">' + v + '</span></div>';
+    }
+    container.innerHTML = html;
+  }
+
+  // ---------- 生成二维码内容 ----------
+  function buildQrContent(d) {
+    // 如果有部署 URL，生成 URL 格式（微信扫码后可打开完整页面）
+    var deployUrl = getDeployUrl();
+    if (deployUrl) {
+      var baseUrl = deployUrl.replace(/#.*$/, '').replace(/\?.*$/, '');
+      var encoded = encodeData(d);
+      return baseUrl + '?d=' + encoded;
+    }
+
+    // 否则生成纯文本（向后兼容）
+    var lines = ['🧯 钢瓶信息卡'];
+    lines.push('────────────────');
+    lines.push('📦 钢瓶');
+    var t = function(k, v) { return k + ':' + v; };
+    if (d.code) lines.push(t('编码', d.code));
+    if (d.owner) lines.push(t('产权', d.owner));
+    if (d.reg_no) lines.push(t('登记', d.reg_no));
+    if (d.tag_no) lines.push(t('标签', d.tag_no));
+    if (d.manufacturer || d.mfg_date) lines.push(t('制造', (d.manufacturer||'') + (d.mfg_date ? ' ' + d.mfg_date : '')));
+    if (d.spec) lines.push(t('规格', d.spec));
+    if (d.inspect_date) lines.push(t('检验', d.inspect_date));
+    if (d.weight) lines.push(t('重量', d.weight + 'KG'));
+    if (d.medium) lines.push(t('介质', d.medium));
+    if (d.volume) lines.push(t('容积', d.volume + 'L'));
+    if (d.next_inspect) lines.push(t('下次检验', d.next_inspect));
+    lines.push('');
+    lines.push('🔧 充装');
+    if (d.fill_unit) lines.push(t('单位', d.fill_unit));
+    if (d.pre_status || d.fill_status) lines.push(t('状态', (d.pre_status||'') + '→' + (d.fill_status||'')));
+    lines.push('');
+    lines.push('🚚 配送');
+    if (d.cust_name) lines.push(t('客户', d.cust_name));
+    if (d.cust_contact) lines.push(t('联系人', d.cust_contact));
+    if (d.cust_phone) lines.push(t('电话', d.cust_phone));
+    if (d.delivery_time) lines.push(t('时间', d.delivery_time.replace('T', ' ')));
+    lines.push('');
+    lines.push('────────────────');
+    lines.push('扫码查询 · 数据真实有效');
+    return lines.join('\n');
+  }
+
+  // ---------- 生成二维码 ----------
+  async function generateQR(text) {
+    var container = document.getElementById('qrcode');
+    container.innerHTML = '';
+    if (typeof QRCode === 'undefined') {
+      container.innerHTML = '<div style="color:#e53935;padding:20px;">⚠️ 二维码库加载失败，请刷新页面</div>';
+      return;
+    }
+    container.innerHTML = '<div style="color:#999;padding:20px;font-size:13px;">⏳ 正在生成二维码...</div>';
+    try {
+      var canvas = await QRCode.toCanvas(text, { width: 500, margin: 2, errorCorrectionLevel: 'M' });
+      container.innerHTML = '';
+      container.appendChild(canvas);
+    } catch(e) {
+      container.innerHTML = '<div style="color:#e53935;padding:20px;">⚠️ 二维码生成失败：' + e.message + '</div>';
+    }
+  }
+
+  // ---------- 预览二维码内容 ----------
+  function renderPreviewText(text) {
+    var el = document.getElementById('qrPreview');
+    if (el) el.textContent = text;
+  }
+
+  // ---------- 渲染历史 ----------
+  function renderHistory() {
+    var list = loadHistory();
+    var el = document.getElementById('historyList');
+    var count = document.getElementById('historyCount');
+    count.textContent = list.length ? '共 ' + list.length + ' 条' : '';
+    if (list.length === 0) {
+      el.innerHTML = '<div class="empty-history">暂无记录</div>';
+      return;
+    }
+    el.innerHTML = list.slice().reverse().map(function(item, idx) {
+      var realIdx = list.length - 1 - idx;
+      var label = item.code || item.tag_no || item.cyl_no || item.reg_no || '钢瓶';
+      var time = item.createdAt
+        ? new Date(item.createdAt).toLocaleString('zh-CN', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})
+        : '';
+      return '<div class="history-item" data-index="' + realIdx + '">' +
+        '<div class="h-icon">🔘</div>' +
+        '<div class="h-info"><div class="h-top">' + label + '</div><div class="h-time">' + time + '</div></div>' +
+        '<span class="h-del" data-del="' + realIdx + '">×</span></div>';
+    }).join('');
+
+    el.querySelectorAll('.history-item').forEach(function(item) {
+      item.addEventListener('click', function(e) {
+        if (e.target.classList.contains('h-del')) return;
+        var idx = parseInt(this.dataset.index);
+        var records = loadHistory();
+        var rec = records[idx];
+        if (!rec) return;
+        showQRForRecord(rec);
+      });
+    });
+    el.querySelectorAll('.h-del').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var idx = parseInt(this.dataset.del);
+        var records = loadHistory();
+        records.splice(idx, 1);
+        saveHistory(records);
+        renderHistory();
+      });
+    });
+  }
+
+  // ---------- 展示二维码 ----------
+  function showQRForRecord(rec) {
+    var area = document.getElementById('qrArea');
+    area.classList.add('show');
+    var qrText = buildQrContent(rec);
+    generateQR(qrText);
+    renderDetail(rec, document.getElementById('qrBody'));
+    document.getElementById('qrPreview').textContent = qrText;
+
+    // 更新提示文字
+    var hint = document.getElementById('qrHint');
+    if (getDeployUrl()) {
+      hint.textContent = '微信扫码即可查看完整信息页面';
+    } else {
+      hint.textContent = '⚠️ 未设置部署地址，微信扫码仅显示文字。请在 ⚙️ 部署设置 中配置';
+      hint.style.color = '#ea8600';
+    }
+  }
+
+  // ========== 扫码查看器（渲染完整信息页面） ==========
+  function renderViewerPage(data) {
+    var appGen = document.getElementById('appGenerator');
+    var appView = document.getElementById('appViewer');
+    appGen.style.display = 'none';
+    appView.classList.add('active');
+
+    // 编码显示
+    var codeEl = document.getElementById('viewerCode');
+    codeEl.textContent = data.code || '';
+
+    // 按分组渲染
+    var container = document.getElementById('viewerCards');
+    var html = '';
+    for (var g = 0; g < FIELD_GROUPS.length; g++) {
+      var group = FIELD_GROUPS[g];
+      var hasField = false;
+      for (var fi = 0; fi < group.fields.length; fi++) {
+        if (data[group.fields[fi]]) { hasField = true; break; }
+      }
+      if (!hasField) continue;
+
+      html += '<div class="viewer-card">';
+      html += '<div class="card-title">' + group.icon + ' ' + group.title + '</div>';
+      for (var fi = 0; fi < group.fields.length; fi++) {
+        var f = group.fields[fi];
+        var v = data[f];
+        if (!v) continue;
+        html += '<div class="info-row"><span class="info-label">' + (FIELD_LABELS[f]||f) + '</span><span class="info-value">' + v + '</span></div>';
+      }
+      html += '</div>';
+    }
+    container.innerHTML = html;
+  }
+
+  // ========== 检测 URL 参数进入查看器模式 ==========
+  function checkViewerMode() {
+    var params = new URLSearchParams(window.location.search);
+    var d = params.get('d');
+    if (!d) return;
+
+    try {
+      var data = decodeData(d);
+      renderViewerPage(data);
+    } catch(e) {
+      // 解码失败，仍然显示页面
+      document.getElementById('appGenerator').style.display = 'none';
+      document.getElementById('appViewer').classList.add('active');
+      document.getElementById('viewerCards').innerHTML =
+        '<div class="viewer-card" style="text-align:center;padding:40px 20px;color:#e53935;">⚠️ 数据解析失败，请确认二维码来源有效</div>';
+    }
+  }
+
+  // 优先检查查看器模式
+  checkViewerMode();
+
+  // ========== 部署设置 ==========
+  var deployToggle = document.getElementById('deployToggle');
+  var deploySection = document.getElementById('deploySection');
+  deployToggle.addEventListener('click', function() {
+    deploySection.classList.toggle('open');
+    if (deploySection.classList.contains('open')) {
+      document.getElementById('deployUrl').value = getDeployUrl();
+      updateDeployStatus();
+    }
+  });
+
+  function updateDeployStatus() {
+    var status = document.getElementById('deployStatus');
+    var url = getDeployUrl();
+    if (url) {
+      status.textContent = '✅ 已设置部署地址，二维码将生成微信可打开的链接';
+      status.className = 'deploy-status ok';
+    } else {
+      status.textContent = '⚠️ 尚未设置部署地址，二维码将包含纯文本信息';
+      status.className = 'deploy-status warn';
+    }
+  }
+
+  document.getElementById('btnSaveUrl').addEventListener('click', function() {
+    var url = document.getElementById('deployUrl').value.trim();
+    if (url) {
+      // 去掉尾部斜杠
+      url = url.replace(/\/+$/, '');
+      setDeployUrl(url);
+    } else {
+      setDeployUrl('');
+    }
+    updateDeployStatus();
+    deploySection.classList.remove('open');
+    // 如果当前有显示的二维码，更新提示
+    var hint = document.getElementById('qrHint');
+    if (document.getElementById('qrArea').classList.contains('show')) {
+      if (url) {
+        hint.textContent = '微信扫码即可查看完整信息页面';
+        hint.style.color = '#999';
+      } else {
+        hint.textContent = '⚠️ 未设置部署地址，微信扫码仅显示文字。请在 ⚙️ 部署设置 中配置';
+        hint.style.color = '#ea8600';
+      }
+    }
+  });
+
+  // 初始化部署状态
+  updateDeployStatus();
+  if (getDeployUrl()) {
+    document.getElementById('deployUrl').value = getDeployUrl();
+  }
+
+  // ---------- 提交 ----------
+  document.getElementById('btnSubmit').addEventListener('click', function() {
+    var data = collectFormData();
+    var err = validate(data);
+    if (err) { alert(err); return; }
+
+    var list = loadHistory();
+    var seq = list.length + 1;
+    var code = makeCode(seq);
+    data.code = code;
+    data.createdAt = new Date().toISOString();
+
+    list.push(data);
+    saveHistory(list);
+
+    showQRForRecord(data);
+    renderHistory();
+
+    document.getElementById('qrArea').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
+  // ---------- 下载 ----------
+  document.getElementById('btnDownload').addEventListener('click', function() {
+    var canvas = document.querySelector('#qrcode canvas');
+    var img = document.querySelector('#qrcode img');
+    var link = document.createElement('a');
+    if (canvas) { link.download = '钢瓶二维码_' + Date.now() + '.png'; link.href = canvas.toDataURL('image/png'); }
+    else if (img) { link.download = '钢瓶二维码_' + Date.now() + '.png'; link.href = img.src; }
+    else return;
+    link.click();
+  });
+
+  // ---------- 继续填写 ----------
+  document.getElementById('btnReset').addEventListener('click', function() {
+    document.querySelectorAll('input, select').forEach(function(el) { el.value = ''; });
+    document.getElementById('qrArea').classList.remove('show');
+    document.getElementById('qrcode').innerHTML = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // ---------- 扫码查看 ----------
+  document.getElementById('btnScan').addEventListener('click', function() {
+    var code = document.getElementById('scanCode').value.trim();
+    var result = document.getElementById('scanResult');
+    if (!code) { result.innerHTML = '<div style="color:#e53935;">请输入钢瓶编码</div>'; return; }
+    var list = loadHistory();
+    var rec = list.find(function(r) { return r.code === code; });
+    if (!rec) { result.innerHTML = '<div style="color:#e53935;">未找到编码「' + code + '」的信息</div>'; return; }
+    var html = '<div class="section" style="margin-bottom:0;"><div style="font-size:15px;font-weight:600;color:#1a73e8;margin-bottom:12px;">🔍 ' + code + ' 详细信息</div>';
+    var fields = [
+      'cyl_no','owner','reg_no','tag_no','manufacturer','mfg_date','spec',
+      'inspect_date','weight','medium','volume','next_inspect',
+      'fill_unit','pre_status','fill_status',
+      'cust_name','cust_contact','cust_phone','delivery_time'
+    ];
+    for (var i = 0; i < fields.length; i++) {
+      var f = fields[i];
+      if (rec[f]) html += '<div class="qr-row"><span class="qr-label">' + (FIELD_LABELS[f]||f) + '</span><span class="qr-val">' + rec[f] + '</span></div>';
+    }
+    html += '</div>';
+    result.innerHTML = html;
+  });
+  document.getElementById('scanCode').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') document.getElementById('btnScan').click();
+  });
+
+  // ---------- Tab 切换 ----------
+  document.querySelectorAll('.tab-item').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      document.querySelectorAll('.tab-item').forEach(function(t) { t.classList.remove('active'); });
+      this.classList.add('active');
+      var target = this.dataset.tab;
+      document.getElementById('tabForm').style.display = target === 'form' ? 'block' : 'none';
+      document.getElementById('tabScan').style.display = target === 'scan' ? 'block' : 'none';
+    });
+  });
+
+  // ---------- 初始化 ----------
+  renderHistory();
+})();
+</script>
+</body>
+</html>
